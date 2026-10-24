@@ -23,6 +23,8 @@ const body = Space_Grotesk({
 export const metadata: Metadata = {
   title: "Socksy",
   description: "Les listes de Noël de la famille, et la surprise gardée.",
+  // Ce que iOS lit quand le site est posé sur l'écran d'accueil.
+  appleWebApp: { capable: true, title: "Socksy", statusBarStyle: "default" },
 };
 
 export const viewport: Viewport = {
