@@ -20,6 +20,8 @@ import {
   cancelReservation,
   createWish,
   deleteWish,
+  getWish,
+  updateWish,
   listWishes,
   listWishesForGuest,
   normalizeLink,
@@ -71,6 +73,38 @@ async function main() {
 
   await assert.rejects(createWish({ title: " ", link: null, priceCents: null, note: null, imageUrl: null }));
   await assert.rejects(createWish({ title: "x", link: null, priceCents: -1, note: null, imageUrl: null }));
+
+  // --- Modification ---------------------------------------------------------
+  assert.deepEqual(
+    await updateWish(livre.id, {
+      title: " Un roman ",
+      link: "https://exemple.fr/roman",
+      priceCents: 2290,
+      note: "Policier",
+      imageUrl: "https://exemple.fr/roman.jpg",
+    }),
+    { previousImageUrl: null },
+  );
+  assert.deepEqual(await getWish(livre.id), {
+    id: livre.id,
+    title: "Un roman",
+    link: "https://exemple.fr/roman",
+    priceCents: 2290,
+    note: "Policier",
+    imageUrl: "https://exemple.fr/roman.jpg",
+  });
+  // La photo d'avant revient, pour être rangée si elle a changé.
+  assert.deepEqual(
+    await updateWish(livre.id, { title: "Un livre", link: null, priceCents: null, note: null, imageUrl: null }),
+    { previousImageUrl: "https://exemple.fr/roman.jpg" },
+  );
+  assert.equal(
+    await updateWish("00000000-0000-0000-0000-000000000000", {
+      title: "x", link: null, priceCents: null, note: null, imageUrl: null,
+    }),
+    undefined,
+  );
+  assert.equal(await getWish("00000000-0000-0000-0000-000000000000"), null);
 
   // --- Réservations ----------------------------------------------------------
   const julie = "julie";

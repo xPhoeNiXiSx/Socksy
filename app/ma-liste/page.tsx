@@ -45,12 +45,17 @@ export default async function MyListPage() {
           {wishes.map((wish) => (
             <li key={wish.id} className="card">
               <WishDetails wish={wish} />
-              <form action={deleteWishAction} className="card-actions">
-                <input type="hidden" name="id" value={wish.id} />
-                <Submit className="link-btn danger" pending="…">
-                  Retirer
-                </Submit>
-              </form>
+              <div className="card-actions">
+                <Link href={`/ma-liste/modifier/${wish.id}`} className="link-btn">
+                  Modifier
+                </Link>
+                <form action={deleteWishAction}>
+                  <input type="hidden" name="id" value={wish.id} />
+                  <Submit className="link-btn danger" pending="…">
+                    Retirer
+                  </Submit>
+                </form>
+              </div>
             </li>
           ))}
         </ul>

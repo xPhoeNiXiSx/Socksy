@@ -7,7 +7,13 @@ import { redirect } from "next/navigation";
 import { closeSession, isOwner } from "@/lib/auth";
 import { fetchLinkImage, isStoredImage, isUploadConfigured } from "@/lib/images";
 import { parseEuros } from "@/lib/money";
-import { createWish, deleteWish, normalizeLink } from "@/lib/wishes";
+import {
+  createWish,
+  deleteWish,
+  normalizeLink,
+  updateWish,
+  type WishInput,
+} from "@/lib/wishes";
 
 export type WishFormState = { error?: string; ok?: number };
 
@@ -33,12 +39,12 @@ function photoOf(formData: FormData): File | null {
   return value instanceof File && value.size > 0 ? value : null;
 }
 
-export async function addWishAction(
-  state: WishFormState,
-  formData: FormData,
-): Promise<WishFormState> {
-  await requireOwner();
-
+/**
+ * Lit et vérifie le formulaire d'une envie, commun à l'ajout et à la
+ * modification. La photo se choisit dans cet ordre : celle qu'on envoie,
+ * puis l'adresse d'image collée, puis celle de la page du lien.
+ */
+async function readWish(formData: FormData): Promise<WishInput | { error: string }> {
   const title = text(formData, "title");
   if (!title) return { error: "Donne un nom à ton envie." };
 
@@ -50,9 +56,12 @@ export async function addWishAction(
     return { error: "Le prix doit être un montant, par exemple 24,90." };
   }
 
-  // Une photo envoyée l'emporte sur celle de la page du lien.
+  const pastedImage = text(formData, "imageUrl");
+  const imageAddress = pastedImage ? normalizeLink(pastedImage) : null;
+  if (imageAddress === undefined) return { error: "L'adresse de l'image n'est pas valide." };
+
   const photo = photoOf(formData);
-  let imageUrl: string | null = null;
+  let imageUrl: string | null;
   if (photo) {
     if (!isUploadConfigured()) {
       return { error: "L'envoi de photos n'est pas encore activé (Vercel Blob)." };
@@ -65,33 +74,59 @@ export async function addWishAction(
       contentType: photo.type,
     });
     imageUrl = blob.url;
-  } else if (link) {
-    imageUrl = await fetchLinkImage(link);
+  } else if (imageAddress) {
+    imageUrl = imageAddress;
+  } else {
+    imageUrl = link ? await fetchLinkImage(link) : null;
   }
 
-  await createWish({
-    title,
-    link,
-    priceCents,
-    note: text(formData, "note") || null,
-    imageUrl,
-  });
+  return { title, link, priceCents, note: text(formData, "note") || null, imageUrl };
+}
+
+/** Range une photo envoyée qui ne sert plus. Un échec ne bloque rien. */
+async function forgetImage(previous: string | null, current: string | null): Promise<void> {
+  if (previous && previous !== current && isStoredImage(previous) && isUploadConfigured()) {
+    await del(previous).catch(() => {});
+  }
+}
+
+export async function addWishAction(
+  state: WishFormState,
+  formData: FormData,
+): Promise<WishFormState> {
+  await requireOwner();
+
+  const wish = await readWish(formData);
+  if ("error" in wish) return { ...state, error: wish.error };
+
+  await createWish(wish);
   revalidatePath("/ma-liste");
   revalidatePath("/");
   // Le compteur change à chaque ajout : le formulaire s'en sert pour se vider.
   return { ok: (state.ok ?? 0) + 1 };
 }
 
+export async function updateWishAction(
+  state: WishFormState,
+  formData: FormData,
+): Promise<WishFormState> {
+  await requireOwner();
+
+  const wish = await readWish(formData);
+  if ("error" in wish) return { ...state, error: wish.error };
+
+  const result = await updateWish(text(formData, "id"), wish);
+  if (result) await forgetImage(result.previousImageUrl, wish.imageUrl);
+
+  revalidatePath("/ma-liste");
+  revalidatePath("/");
+  redirect("/ma-liste");
+}
+
 export async function deleteWishAction(formData: FormData): Promise<void> {
   await requireOwner();
   const id = text(formData, "id");
-  if (id) {
-    const imageUrl = await deleteWish(id);
-    // Une photo envoyée n'a plus de raison d'être ; un échec ne bloque rien.
-    if (imageUrl && isStoredImage(imageUrl) && isUploadConfigured()) {
-      await del(imageUrl).catch(() => {});
-    }
-  }
+  if (id) await forgetImage(await deleteWish(id), null);
   revalidatePath("/ma-liste");
   revalidatePath("/");
 }

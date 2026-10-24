@@ -53,6 +53,15 @@ export async function listWishes(): Promise<Wish[]> {
   return rows.map(toWish);
 }
 
+/** Une envie, telle que la voit le propriétaire (sans réservation). */
+export async function getWish(id: string): Promise<Wish | null> {
+  const rows = await query<WishRow>(
+    `select ${WISH_COLUMNS} from wishes w where w.id = $1`,
+    [id],
+  );
+  return rows[0] ? toWish(rows[0]) : null;
+}
+
 /** Les envies vues par un invité, réservations comprises. */
 export async function listWishesForGuest(guestId: string | null): Promise<GuestWish[]> {
   const rows = await query<WishRow & { guest_name: string | null; guest_id: string | null }>(
@@ -76,6 +85,25 @@ export async function createWish(input: WishInput): Promise<Wish> {
     [input.title.trim(), input.link, input.priceCents, input.note, input.imageUrl],
   );
   return toWish(row);
+}
+
+/**
+ * Remplace le contenu d'une envie. Renvoie l'adresse de la photo d'avant,
+ * pour la ranger si elle a changé ; `undefined` si l'envie n'existe plus.
+ */
+export async function updateWish(
+  id: string,
+  input: WishInput,
+): Promise<{ previousImageUrl: string | null } | undefined> {
+  const rows = await query<{ previous_image_url: string | null }>(
+    `update wishes w
+        set title = $2, link = $3, price_cents = $4, note = $5, image_url = $6
+       from (select id, image_url from wishes where id = $1) before
+      where w.id = before.id
+      returning before.image_url as previous_image_url`,
+    [id, input.title.trim(), input.link, input.priceCents, input.note, input.imageUrl],
+  );
+  return rows[0] ? { previousImageUrl: rows[0].previous_image_url } : undefined;
 }
 
 /** Supprime l'envie et renvoie l'adresse de sa photo, pour la ranger aussi. */
