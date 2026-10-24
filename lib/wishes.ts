@@ -6,6 +6,7 @@ export type Wish = {
   link: string | null;
   priceCents: number | null;
   note: string | null;
+  imageUrl: string | null;
 };
 
 export type WishInput = Omit<Wish, "id">;
@@ -23,9 +24,10 @@ type WishRow = {
   link: string | null;
   price_cents: number | null;
   note: string | null;
+  image_url: string | null;
 };
 
-const WISH_COLUMNS = "w.id, w.title, w.link, w.price_cents, w.note";
+const WISH_COLUMNS = "w.id, w.title, w.link, w.price_cents, w.note, w.image_url";
 
 function toWish(row: WishRow): Wish {
   return {
@@ -34,6 +36,7 @@ function toWish(row: WishRow): Wish {
     link: row.link,
     priceCents: row.price_cents,
     note: row.note,
+    imageUrl: row.image_url,
   };
 }
 
@@ -67,16 +70,21 @@ export async function listWishesForGuest(guestId: string | null): Promise<GuestW
 
 export async function createWish(input: WishInput): Promise<Wish> {
   const [row] = await query<WishRow>(
-    `insert into wishes as w (title, link, price_cents, note)
-     values ($1, $2, $3, $4)
+    `insert into wishes as w (title, link, price_cents, note, image_url)
+     values ($1, $2, $3, $4, $5)
      returning ${WISH_COLUMNS}`,
-    [input.title.trim(), input.link, input.priceCents, input.note],
+    [input.title.trim(), input.link, input.priceCents, input.note, input.imageUrl],
   );
   return toWish(row);
 }
 
-export async function deleteWish(id: string): Promise<void> {
-  await query(`delete from wishes where id = $1`, [id]);
+/** Supprime l'envie et renvoie l'adresse de sa photo, pour la ranger aussi. */
+export async function deleteWish(id: string): Promise<string | null> {
+  const rows = await query<{ image_url: string | null }>(
+    `delete from wishes where id = $1 returning image_url`,
+    [id],
+  );
+  return rows[0]?.image_url ?? null;
 }
 
 /** Réserve une envie pour un invité. `false` si elle est déjà prise ou n'existe pas. */

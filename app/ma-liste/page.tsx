@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { isUploadConfigured } from "@/lib/images";
 import { listWishes } from "@/lib/wishes";
 
 import { ListHero } from "../ui/list-hero";
@@ -35,7 +36,7 @@ export default async function MyListPage() {
         <ShareLink url={`${origin}/`} />
       </section>
 
-      <WishForm />
+      <WishForm uploads={isUploadConfigured()} />
 
       {wishes.length === 0 ? (
         <p className="empty">Ta liste est vide. Ajoute ta première envie !</p>

@@ -12,6 +12,7 @@ import { PGlite } from "@electric-sql/pglite";
 
 import { daysUntilChristmas } from "../lib/countdown";
 import { setQueryRunner } from "../lib/db";
+import { extractImage, isStoredImage } from "../lib/images";
 import { formatCents, parseEuros } from "../lib/money";
 import { SCHEMA_STATEMENTS } from "../lib/schema";
 import { newToken, safeEquals, verifyToken } from "../lib/session";
@@ -60,14 +61,16 @@ async function main() {
     link: "https://exemple.fr/pull",
     priceCents: 4990,
     note: "Taille M",
+    imageUrl: "https://exemple.fr/pull.jpg",
   });
   assert.equal(pull.title, "Un pull");
   assert.equal(pull.priceCents, 4990);
-  const livre = await createWish({ title: "Un livre", link: null, priceCents: null, note: null });
+  assert.equal(pull.imageUrl, "https://exemple.fr/pull.jpg");
+  const livre = await createWish({ title: "Un livre", link: null, priceCents: null, note: null, imageUrl: null });
   assert.deepEqual((await listWishes()).map((w) => w.title), ["Un pull", "Un livre"]);
 
-  await assert.rejects(createWish({ title: " ", link: null, priceCents: null, note: null }));
-  await assert.rejects(createWish({ title: "x", link: null, priceCents: -1, note: null }));
+  await assert.rejects(createWish({ title: " ", link: null, priceCents: null, note: null, imageUrl: null }));
+  await assert.rejects(createWish({ title: "x", link: null, priceCents: -1, note: null, imageUrl: null }));
 
   // --- Réservations ----------------------------------------------------------
   const julie = "julie";
@@ -106,8 +109,31 @@ async function main() {
 
   // Supprimer une envie emporte sa réservation.
   await reserveWish({ wishId: livre.id, guestId: julie, guestName: "Julie" });
-  await deleteWish(livre.id);
+  assert.equal(await deleteWish(livre.id), null);
   assert.deepEqual((await db.query(`select * from reservations`)).rows, []);
+  // La suppression rend l'adresse de la photo, pour la ranger aussi.
+  assert.equal(await deleteWish(pull.id), "https://exemple.fr/pull.jpg");
+  assert.equal(await deleteWish(pull.id), null);
+
+  // --- Photos depuis la page du lien ----------------------------------------
+  const page = "https://boutique.fr/produits/pull?ref=1";
+  assert.equal(
+    extractImage(`<head><meta property="og:image" content="/img/pull.jpg?w=800&amp;h=800"></head>`, page),
+    "https://boutique.fr/img/pull.jpg?w=800&h=800",
+  );
+  // Attributs dans l'autre ordre, guillemets simples, et préférence à og:image.
+  assert.equal(
+    extractImage(
+      `<meta content='https://cdn.fr/tw.jpg' name='twitter:image'><meta content="https://cdn.fr/og.jpg" property="og:image">`,
+      page,
+    ),
+    "https://cdn.fr/og.jpg",
+  );
+  assert.equal(extractImage(`<link rel="image_src" href="//cdn.fr/old.png">`, page), "https://cdn.fr/old.png");
+  assert.equal(extractImage(`<meta property="og:image" content="javascript:alert(1)">`, page), null);
+  assert.equal(extractImage(`<html><head><title>Rien</title></head></html>`, page), null);
+  assert.equal(isStoredImage("https://abc.public.blob.vercel-storage.com/envies/x.jpg"), true);
+  assert.equal(isStoredImage("https://exemple.fr/pull.jpg"), false);
 
   // --- Montants, liens, compte à rebours ------------------------------------
   assert.equal(parseEuros("24,90"), 2490);

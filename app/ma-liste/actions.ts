@@ -1,13 +1,18 @@
 "use server";
 
+import { del, put } from "@vercel/blob";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { closeSession, isOwner } from "@/lib/auth";
+import { fetchLinkImage, isStoredImage, isUploadConfigured } from "@/lib/images";
 import { parseEuros } from "@/lib/money";
 import { createWish, deleteWish, normalizeLink } from "@/lib/wishes";
 
 export type WishFormState = { error?: string; ok?: number };
+
+/** Le navigateur réduit la photo avant l'envoi : au-delà, ce n'est pas normal. */
+const MAX_PHOTO_BYTES = 3 * 1024 * 1024;
 
 /**
  * Le proxy ferme déjà /ma-liste, mais une action serveur reste un point
@@ -20,6 +25,12 @@ async function requireOwner(): Promise<void> {
 function text(formData: FormData, name: string): string {
   const value = formData.get(name);
   return typeof value === "string" ? value.trim() : "";
+}
+
+/** La photo envoyée, si l'on en a choisi une. */
+function photoOf(formData: FormData): File | null {
+  const value = formData.get("photo");
+  return value instanceof File && value.size > 0 ? value : null;
 }
 
 export async function addWishAction(
@@ -39,11 +50,31 @@ export async function addWishAction(
     return { error: "Le prix doit être un montant, par exemple 24,90." };
   }
 
+  // Une photo envoyée l'emporte sur celle de la page du lien.
+  const photo = photoOf(formData);
+  let imageUrl: string | null = null;
+  if (photo) {
+    if (!isUploadConfigured()) {
+      return { error: "L'envoi de photos n'est pas encore activé (Vercel Blob)." };
+    }
+    if (!photo.type.startsWith("image/")) return { error: "Ce fichier n'est pas une image." };
+    if (photo.size > MAX_PHOTO_BYTES) return { error: "Cette photo est trop lourde." };
+
+    const blob = await put(`envies/${crypto.randomUUID()}.jpg`, photo, {
+      access: "public",
+      contentType: photo.type,
+    });
+    imageUrl = blob.url;
+  } else if (link) {
+    imageUrl = await fetchLinkImage(link);
+  }
+
   await createWish({
     title,
     link,
     priceCents,
     note: text(formData, "note") || null,
+    imageUrl,
   });
   revalidatePath("/ma-liste");
   revalidatePath("/");
@@ -54,7 +85,13 @@ export async function addWishAction(
 export async function deleteWishAction(formData: FormData): Promise<void> {
   await requireOwner();
   const id = text(formData, "id");
-  if (id) await deleteWish(id);
+  if (id) {
+    const imageUrl = await deleteWish(id);
+    // Une photo envoyée n'a plus de raison d'être ; un échec ne bloque rien.
+    if (imageUrl && isStoredImage(imageUrl) && isUploadConfigured()) {
+      await del(imageUrl).catch(() => {});
+    }
+  }
   revalidatePath("/ma-liste");
   revalidatePath("/");
 }

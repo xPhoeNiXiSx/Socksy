@@ -16,8 +16,12 @@ Ma liste de Noël, et la surprise gardée.
 | `APP_PASSWORD` | Mot de passe pour gérer la liste |
 | `AUTH_SECRET` | Clé de signature du cookie de session (`openssl rand -hex 32`) |
 | `OWNER_NAME` | Facultatif : le prénom affiché en tête de liste |
+| `BLOB_READ_WRITE_TOKEN` | Facultatif : envoi de photos. Posée par Vercel en créant un stockage Blob (Storage) relié au projet |
 
 Le schéma s'applique tout seul au premier accès à la base.
+
+Une envie avec un lien reçoit la photo annoncée par la page produit
+(`og:image`). Une photo envoyée depuis `/ma-liste` la remplace.
 
 ## Développement
 

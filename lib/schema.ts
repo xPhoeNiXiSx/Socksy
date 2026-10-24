@@ -23,6 +23,10 @@ export const SCHEMA_STATEMENTS: string[] = [
      created_at  timestamptz not null default now()
    )`,
 
+  // Photo de l'envie : récupérée sur la page du lien, ou envoyée à la main
+  // (stockée alors dans Vercel Blob). Toujours une adresse http(s).
+  `alter table wishes add column if not exists image_url text`,
+
   // Une réservation au plus par envie. Le propriétaire de la liste ne la lit
   // jamais : seules les requêtes de la vue invité joignent cette table.
   `create table if not exists reservations (

@@ -144,6 +144,12 @@ h2 {
   color: var(--ink-muted);
 }
 
+.hint {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink-muted);
+}
+
 .error {
   color: var(--danger);
   font-weight: 700;
@@ -176,6 +182,21 @@ h2 {
   background: var(--taken);
   border: 2.5px dashed var(--taken-border);
   box-shadow: none;
+}
+
+.card-thumb {
+  flex-shrink: 0;
+  width: 64px;
+  height: 64px;
+  object-fit: cover;
+  border: 2px solid var(--ink);
+  border-radius: 12px;
+  background: var(--paper);
+}
+
+.card.taken .card-thumb {
+  opacity: 0.6;
+  filter: grayscale(0.6);
 }
 
 .card-body {
