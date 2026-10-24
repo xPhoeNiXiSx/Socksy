@@ -1,0 +1,144 @@
+/* ==========================================================================
+   Socksy — base provisoire, en attendant le choix d'une direction graphique.
+   Thème clair uniquement : pas de variante sombre ni de
+   `prefers-color-scheme` à suivre.
+   ========================================================================== */
+
+:root {
+  color-scheme: light;
+
+  --bg: #ffffff;
+  --surface: #f6f6f7;
+  --fg: #1a1a1d;
+  --fg-muted: #5f6068;
+  --border: #e2e2e6;
+  --accent: #1a1a1d;
+  --on-accent: #ffffff;
+  --danger: #b42318;
+
+  --radius: 12px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  line-height: 1.5;
+}
+
+.page {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 32px 16px 64px;
+}
+
+h1 {
+  margin: 0 0 24px;
+  font-size: 1.75rem;
+}
+
+h2 {
+  margin: 0 0 12px;
+  font-size: 1.1rem;
+}
+
+a {
+  color: inherit;
+}
+
+.hint {
+  color: var(--fg-muted);
+}
+
+.error {
+  color: var(--danger);
+}
+
+.wishes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.wish {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.wish-body {
+  min-width: 0;
+}
+
+.wish-title {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.wish-meta {
+  color: var(--fg-muted);
+  font-size: 0.9rem;
+  overflow-wrap: anywhere;
+}
+
+.form {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 32px;
+}
+
+label {
+  display: grid;
+  gap: 4px;
+  font-size: 0.9rem;
+}
+
+input,
+textarea {
+  font: inherit;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+button {
+  font: inherit;
+  font-weight: 600;
+  padding: 10px 16px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--accent);
+  color: var(--on-accent);
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.6;
+}
+
+button.ghost {
+  background: transparent;
+  color: var(--danger);
+  padding: 4px 8px;
+}
+
+.nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 24px;
+}
