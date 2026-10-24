@@ -1,11 +1,8 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 
-import { listFamily } from "@/lib/accounts";
-import { currentUser } from "@/lib/auth";
 import { listWishes } from "@/lib/wishes";
 
-import { Hero } from "../ui/hero";
+import { ListHero } from "../ui/list-hero";
 import { siteOrigin } from "../ui/origin";
 import { SetupScreen, missingConfig } from "../ui/setup";
 import { Submit } from "../ui/submit";
@@ -21,19 +18,13 @@ export default async function MyListPage() {
   const missing = missingConfig();
   if (missing.length > 0) return <SetupScreen missing={missing} />;
 
-  const user = await currentUser();
-  if (!user) redirect("/login?next=/ma-liste");
-
-  const [wishes, family, origin] = await Promise.all([
-    listWishes(user.id),
-    listFamily(user.id),
-    siteOrigin(),
-  ]);
+  // Le proxy a déjà vérifié la session avant d'arriver ici.
+  const [wishes, origin] = await Promise.all([listWishes(), siteOrigin()]);
 
   return (
     <main className="page">
       <TopBar />
-      <Hero kicker="La liste de" title={user.name} />
+      <ListHero />
 
       <section className="panel">
         <h2>Partager ma liste</h2>
@@ -41,7 +32,7 @@ export default async function MyListPage() {
           Envoie ce lien : on peut réserver un cadeau sans compte. Tu ne verras
           jamais ce qui est réservé.
         </p>
-        <ShareLink url={`${origin}/l/${user.shareToken}`} />
+        <ShareLink url={`${origin}/`} />
       </section>
 
       <WishForm />
@@ -64,24 +55,16 @@ export default async function MyListPage() {
         </ul>
       )}
 
-      {family.length > 0 ? (
-        <section className="panel">
-          <h2>Les listes de la famille</h2>
-          <div className="family">
-            {family.map((member) => (
-              <Link key={member.id} href={`/l/${member.shareToken}`} className="btn plain">
-                {member.name}
-              </Link>
-            ))}
-          </div>
-        </section>
-      ) : null}
-
-      <form action={logoutAction} className="footer">
-        <Submit className="link-btn" pending="…">
-          Se déconnecter
-        </Submit>
-      </form>
+      <div className="footer" style={{ gap: 16 }}>
+        <Link href="/" className="link-btn">
+          Voir ma liste
+        </Link>
+        <form action={logoutAction}>
+          <Submit className="link-btn" pending="…">
+            Se déconnecter
+          </Submit>
+        </form>
+      </div>
     </main>
   );
 }

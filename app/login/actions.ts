@@ -2,8 +2,7 @@
 
 import { redirect } from "next/navigation";
 
-import { authenticate } from "@/lib/accounts";
-import { openSession } from "@/lib/auth";
+import { checkPassword, isAuthConfigured, openSession } from "@/lib/auth";
 
 export type LoginState = { error?: string };
 
@@ -17,15 +16,15 @@ export async function loginAction(
   _state: LoginState,
   formData: FormData,
 ): Promise<LoginState> {
-  const email = formData.get("email");
-  const password = formData.get("password");
-  if (typeof email !== "string" || typeof password !== "string") {
-    return { error: "Renseigne ton e-mail et ton mot de passe." };
+  if (!isAuthConfigured()) {
+    return { error: "APP_PASSWORD ou AUTH_SECRET manque dans Vercel." };
   }
 
-  const user = await authenticate(email, password);
-  if (!user) return { error: "E-mail ou mot de passe incorrect." };
+  const password = formData.get("password");
+  if (typeof password !== "string" || !checkPassword(password)) {
+    return { error: "Mot de passe incorrect." };
+  }
 
-  await openSession(user.id);
+  await openSession();
   redirect(safeNext(formData.get("next")));
 }

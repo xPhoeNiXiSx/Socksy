@@ -1,11 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { SESSION_COOKIE, isAuthConfigured, readToken } from "@/lib/session";
+import { SESSION_COOKIE, isAuthConfigured, verifyToken } from "@/lib/session";
 
 /**
- * Seul l'espace personnel (`/ma-liste`) demande un compte. L'accueil, la
- * connexion, l'inscription et les listes partagées (`/l/…`) sont ouverts :
- * un invité doit pouvoir réserver un cadeau sans rien créer.
+ * Seule la gestion de la liste (`/ma-liste`) demande le mot de passe. La
+ * liste elle-même, sur l'accueil, est ouverte : un invité doit pouvoir
+ * réserver un cadeau sans rien créer.
  */
 const PRIVATE_PREFIXES = ["/ma-liste"];
 
@@ -16,13 +16,13 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Sans clé de signature, personne ne pourrait se connecter : la page
+  // Sans mot de passe configuré, personne ne pourrait se connecter : la page
   // affiche alors ce qui manque plutôt que de boucler sur la connexion.
   if (!isAuthConfigured()) {
     return NextResponse.next();
   }
 
-  if (await readToken(request.cookies.get(SESSION_COOKIE)?.value)) {
+  if (await verifyToken(request.cookies.get(SESSION_COOKIE)?.value)) {
     return NextResponse.next();
   }
 

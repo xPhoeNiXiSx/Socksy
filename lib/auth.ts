@@ -1,23 +1,32 @@
 import { cookies } from "next/headers";
 
-import { getUser, type User } from "@/lib/accounts";
 import {
   SESSION_COOKIE,
   SESSION_MAX_AGE,
   newToken,
-  readToken,
+  safeEquals,
+  verifyToken,
 } from "@/lib/session";
 
 export { isAuthConfigured } from "@/lib/session";
 
 /**
- * Ouverture et fermeture de session. La porte de `/ma-liste` est fermée par
- * le proxy ; ces fonctions servent aux pages et aux actions serveur, qui
- * vérifient la session elles-mêmes.
+ * Authentification volontairement minimale : un mot de passe unique, celui
+ * du propriétaire de la liste. Les invités n'en ont pas besoin.
  */
 
-export async function openSession(userId: string): Promise<void> {
-  (await cookies()).set(SESSION_COOKIE, await newToken(userId), {
+export function checkPassword(candidate: string): boolean {
+  const expected = process.env.APP_PASSWORD;
+  if (!expected) {
+    throw new Error(
+      "APP_PASSWORD n'est pas définie. Ajoute-la dans les variables d'environnement Vercel.",
+    );
+  }
+  return safeEquals(candidate, expected);
+}
+
+export async function openSession(): Promise<void> {
+  (await cookies()).set(SESSION_COOKIE, await newToken(), {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
@@ -30,8 +39,7 @@ export async function closeSession(): Promise<void> {
   (await cookies()).delete(SESSION_COOKIE);
 }
 
-/** Le compte connecté, ou `null`. Un compte supprimé entre-temps compte comme déconnecté. */
-export async function currentUser(): Promise<User | null> {
-  const userId = await readToken((await cookies()).get(SESSION_COOKIE)?.value);
-  return userId ? getUser(userId) : null;
+/** `true` si le propriétaire de la liste est connecté. */
+export async function isOwner(): Promise<boolean> {
+  return verifyToken((await cookies()).get(SESSION_COOKIE)?.value);
 }

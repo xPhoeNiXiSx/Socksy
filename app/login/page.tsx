@@ -18,7 +18,7 @@ export default async function LoginPage({
   return (
     <main className="page">
       <TopBar />
-      <Hero kicker="Content de te revoir" title="Connexion" />
+      <Hero kicker="Gérer ma liste" title="Connexion" />
       <LoginForm next={next ?? ""} />
     </main>
   );

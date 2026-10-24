@@ -10,17 +10,11 @@ import assert from "node:assert/strict";
 
 import { PGlite } from "@electric-sql/pglite";
 
-import {
-  authenticate,
-  createUser,
-  getUserByShareToken,
-  listFamily,
-} from "../lib/accounts";
 import { daysUntilChristmas } from "../lib/countdown";
 import { setQueryRunner } from "../lib/db";
 import { formatCents, parseEuros } from "../lib/money";
 import { SCHEMA_STATEMENTS } from "../lib/schema";
-import { newToken, readToken, safeEquals } from "../lib/session";
+import { newToken, safeEquals, verifyToken } from "../lib/session";
 import {
   cancelReservation,
   createWish,
@@ -34,14 +28,20 @@ import {
 async function main() {
   const db = new PGlite();
 
-  // Base de la première version, mono-utilisateur, avec une envie déjà là :
-  // le nouveau schéma doit s'appliquer par-dessus sans erreur.
+  // Base laissée par la version à comptes : table `users` et colonne
+  // `owner_id`. Le schéma actuel doit s'appliquer par-dessus sans erreur, et
+  // les envies déjà saisies doivent rester visibles.
+  await db.query(`create table users (id uuid primary key default gen_random_uuid(), name text not null)`);
   await db.query(`create table wishes (
     id uuid primary key default gen_random_uuid(),
     title text not null check (length(btrim(title)) > 0),
     link text, price_cents integer check (price_cents >= 0), note text,
-    created_at timestamptz not null default now())`);
-  await db.query(`insert into wishes (title) values ('Ancienne envie')`);
+    created_at timestamptz not null default now(),
+    owner_id uuid references users(id) on delete cascade)`);
+  const [{ id: ownerId }] = (
+    await db.query<{ id: string }>(`insert into users (name) values ('Moi') returning id`)
+  ).rows;
+  await db.query(`insert into wishes (title, owner_id) values ('Envie déjà saisie', $1)`, [ownerId]);
 
   setQueryRunner(async <T>(text: string, params: unknown[] = []) =>
     (await db.query<T>(text, params)).rows,
@@ -49,94 +49,64 @@ async function main() {
 
   // Le schéma se rejoue sans erreur sur une base déjà à jour.
   for (const statement of SCHEMA_STATEMENTS) await db.query(statement);
+  for (const statement of SCHEMA_STATEMENTS) await db.query(statement);
 
-  // --- Comptes -------------------------------------------------------------
-  const lea = await createUser({ name: " Léa ", email: "Lea@Exemple.fr ", password: "motdepasse" });
-  assert.notEqual(lea, "email_taken");
-  if (lea === "email_taken") throw new Error("inaccessible");
-  assert.equal(lea.name, "Léa");
-  assert.equal(lea.email, "lea@exemple.fr");
-  assert.equal(
-    await createUser({ name: "Autre", email: "LEA@exemple.fr", password: "motdepasse" }),
-    "email_taken",
-  );
-
-  const marc = await createUser({ name: "Marc", email: "marc@exemple.fr", password: "12345678" });
-  if (marc === "email_taken") throw new Error("inaccessible");
-
-  assert.equal((await authenticate("lea@exemple.fr", "motdepasse"))?.id, lea.id);
-  assert.equal(await authenticate("lea@exemple.fr", "mauvais"), null);
-  assert.equal(await authenticate("personne@exemple.fr", "motdepasse"), null);
-  assert.equal((await getUserByShareToken(lea.shareToken))?.id, lea.id);
-  assert.equal(await getUserByShareToken("inconnu"), null);
-  assert.deepEqual((await listFamily(lea.id)).map((u) => u.name), ["Marc"]);
+  assert.deepEqual((await listWishes()).map((w) => w.title), ["Envie déjà saisie"]);
+  await db.query(`delete from wishes`);
 
   // --- Envies ----------------------------------------------------------------
-  // L'envie d'avant les comptes n'appartient à personne : elle n'apparaît nulle part.
-  assert.deepEqual(await listWishes(lea.id), []);
-
-  const pull = await createWish(lea.id, {
+  const pull = await createWish({
     title: "  Un pull  ",
     link: "https://exemple.fr/pull",
     priceCents: 4990,
     note: "Taille M",
   });
   assert.equal(pull.title, "Un pull");
-  const livre = await createWish(lea.id, { title: "Un livre", link: null, priceCents: null, note: null });
-  assert.deepEqual((await listWishes(lea.id)).map((w) => w.title), ["Un pull", "Un livre"]);
-  assert.deepEqual(await listWishes(marc.id), []);
+  assert.equal(pull.priceCents, 4990);
+  const livre = await createWish({ title: "Un livre", link: null, priceCents: null, note: null });
+  assert.deepEqual((await listWishes()).map((w) => w.title), ["Un pull", "Un livre"]);
 
-  // On ne supprime pas l'envie d'un autre.
-  await deleteWish(marc.id, pull.id);
-  assert.equal((await listWishes(lea.id)).length, 2);
-
-  await assert.rejects(createWish(lea.id, { title: " ", link: null, priceCents: null, note: null }));
-  await assert.rejects(createWish(lea.id, { title: "x", link: null, priceCents: -1, note: null }));
+  await assert.rejects(createWish({ title: " ", link: null, priceCents: null, note: null }));
+  await assert.rejects(createWish({ title: "x", link: null, priceCents: -1, note: null }));
 
   // --- Réservations ----------------------------------------------------------
-  const julie = "guest:julie";
-  assert.equal(
-    await reserveWish({ wishId: pull.id, ownerId: lea.id, guestId: julie, guestName: "Julie" }),
-    true,
-  );
+  const julie = "julie";
+  const marc = "marc";
+  assert.equal(await reserveWish({ wishId: pull.id, guestId: julie, guestName: "Julie" }), true);
   // Déjà prise : refusée, et la première réservation tient.
+  assert.equal(await reserveWish({ wishId: pull.id, guestId: marc, guestName: "Marc" }), false);
+  // Une envie inconnue est refusée.
   assert.equal(
-    await reserveWish({ wishId: pull.id, ownerId: lea.id, guestId: `user:${marc.id}`, guestName: "Marc" }),
-    false,
-  );
-  // La propriétaire ne peut pas réserver sa propre envie.
-  assert.equal(
-    await reserveWish({ wishId: livre.id, ownerId: lea.id, guestId: `user:${lea.id}`, guestName: "Léa" }),
-    false,
-  );
-  // Une envie présentée avec le lien d'une autre liste est refusée.
-  assert.equal(
-    await reserveWish({ wishId: livre.id, ownerId: marc.id, guestId: julie, guestName: "Julie" }),
+    await reserveWish({
+      wishId: "00000000-0000-0000-0000-000000000000",
+      guestId: marc,
+      guestName: "Marc",
+    }),
     false,
   );
 
-  const seenByMarc = await listWishesForGuest(lea.id, `user:${marc.id}`);
+  const seenByMarc = await listWishesForGuest(marc);
   assert.deepEqual(
     seenByMarc.map((w) => [w.title, w.reservedBy, w.mine]),
     [["Un pull", "Julie", false], ["Un livre", null, false]],
   );
-  const seenByJulie = await listWishesForGuest(lea.id, julie);
-  assert.equal(seenByJulie[0].mine, true);
+  assert.equal((await listWishesForGuest(julie))[0].mine, true);
+  assert.equal((await listWishesForGuest(null))[0].mine, false);
 
-  // La vue propriétaire ne porte aucune trace des réservations.
-  for (const wish of await listWishes(lea.id)) {
+  // La vue du propriétaire ne porte aucune trace des réservations.
+  for (const wish of await listWishes()) {
     assert.equal("reservedBy" in wish, false);
   }
 
   // Seule Julie peut annuler sa réservation.
-  await cancelReservation(pull.id, `user:${marc.id}`);
-  assert.equal((await listWishesForGuest(lea.id, julie))[0].reservedBy, "Julie");
+  await cancelReservation(pull.id, marc);
+  assert.equal((await listWishesForGuest(julie))[0].reservedBy, "Julie");
   await cancelReservation(pull.id, julie);
-  assert.equal((await listWishesForGuest(lea.id, julie))[0].reservedBy, null);
+  assert.equal((await listWishesForGuest(julie))[0].reservedBy, null);
 
   // Supprimer une envie emporte sa réservation.
-  await reserveWish({ wishId: livre.id, ownerId: lea.id, guestId: julie, guestName: "Julie" });
-  await deleteWish(lea.id, livre.id);
+  await reserveWish({ wishId: livre.id, guestId: julie, guestName: "Julie" });
+  await deleteWish(livre.id);
   assert.deepEqual((await db.query(`select * from reservations`)).rows, []);
 
   // --- Montants, liens, compte à rebours ------------------------------------
@@ -159,11 +129,10 @@ async function main() {
 
   // --- Session ---------------------------------------------------------------
   process.env.AUTH_SECRET = "secret-de-test";
-  const token = await newToken(lea.id);
-  assert.equal(await readToken(token), lea.id);
-  assert.equal(await readToken(`${token}x`), null);
-  assert.equal(await readToken(token.replace(lea.id, marc.id)), null);
-  assert.equal(await readToken(undefined), null);
+  const token = await newToken();
+  assert.equal(await verifyToken(token), true);
+  assert.equal(await verifyToken(`${token}x`), false);
+  assert.equal(await verifyToken(undefined), false);
   assert.equal(safeEquals("abc", "abd"), false);
 
   console.log("Tous les tests passent.");

@@ -36,8 +36,8 @@ Polices : Archivo Black (logo, titres, prénoms), Space Grotesk (texte).
 
 Le propriétaire d'une liste ne doit **jamais** voir les réservations de sa
 liste, par aucun chemin. Seule `listWishesForGuest` joint la table
-`reservations`, et la vue d'un propriétaire sur son propre lien ne l'appelle
-pas. Toute nouvelle requête sur les envies garde cette règle.
+`reservations`, et l'accueil ne l'appelle pas quand le propriétaire est
+connecté. Toute nouvelle requête sur les envies garde cette règle.
 
 ## Règles techniques
 

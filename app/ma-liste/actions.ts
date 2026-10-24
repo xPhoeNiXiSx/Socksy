@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { closeSession, currentUser } from "@/lib/auth";
+import { closeSession, isOwner } from "@/lib/auth";
 import { parseEuros } from "@/lib/money";
 import { createWish, deleteWish, normalizeLink } from "@/lib/wishes";
 
@@ -11,12 +11,10 @@ export type WishFormState = { error?: string; ok?: number };
 
 /**
  * Le proxy ferme déjà /ma-liste, mais une action serveur reste un point
- * d'entrée à part entière : elle retrouve le compte elle-même.
+ * d'entrée à part entière : elle vérifie la session elle-même.
  */
-async function requireUser() {
-  const user = await currentUser();
-  if (!user) redirect("/login?next=/ma-liste");
-  return user;
+async function requireOwner(): Promise<void> {
+  if (!(await isOwner())) redirect("/login?next=/ma-liste");
 }
 
 function text(formData: FormData, name: string): string {
@@ -28,7 +26,7 @@ export async function addWishAction(
   state: WishFormState,
   formData: FormData,
 ): Promise<WishFormState> {
-  const user = await requireUser();
+  await requireOwner();
 
   const title = text(formData, "title");
   if (!title) return { error: "Donne un nom à ton envie." };
@@ -41,22 +39,24 @@ export async function addWishAction(
     return { error: "Le prix doit être un montant, par exemple 24,90." };
   }
 
-  await createWish(user.id, {
+  await createWish({
     title,
     link,
     priceCents,
     note: text(formData, "note") || null,
   });
   revalidatePath("/ma-liste");
+  revalidatePath("/");
   // Le compteur change à chaque ajout : le formulaire s'en sert pour se vider.
   return { ok: (state.ok ?? 0) + 1 };
 }
 
 export async function deleteWishAction(formData: FormData): Promise<void> {
-  const user = await requireUser();
+  await requireOwner();
   const id = text(formData, "id");
-  if (id) await deleteWish(user.id, id);
+  if (id) await deleteWish(id);
   revalidatePath("/ma-liste");
+  revalidatePath("/");
 }
 
 export async function logoutAction(): Promise<void> {

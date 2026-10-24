@@ -38,32 +38,25 @@ function toWish(row: WishRow): Wish {
 }
 
 /**
- * Les envies d'une liste, telles que les voit son propriétaire : cette
- * requête ne touche jamais aux réservations, c'est ce qui garde la surprise.
+ * Les envies telles que les voit le propriétaire de la liste : cette requête
+ * ne touche jamais aux réservations, c'est ce qui garde la surprise.
  */
-export async function listWishes(ownerId: string): Promise<Wish[]> {
+export async function listWishes(): Promise<Wish[]> {
   const rows = await query<WishRow>(
     `select ${WISH_COLUMNS}
        from wishes w
-      where w.owner_id = $1
       order by w.created_at, w.id`,
-    [ownerId],
   );
   return rows.map(toWish);
 }
 
-/** Les envies d'une liste vues par un invité, réservations comprises. */
-export async function listWishesForGuest(
-  ownerId: string,
-  guestId: string | null,
-): Promise<GuestWish[]> {
+/** Les envies vues par un invité, réservations comprises. */
+export async function listWishesForGuest(guestId: string | null): Promise<GuestWish[]> {
   const rows = await query<WishRow & { guest_name: string | null; guest_id: string | null }>(
     `select ${WISH_COLUMNS}, r.guest_name, r.guest_id
        from wishes w
        left join reservations r on r.wish_id = w.id
-      where w.owner_id = $1
       order by w.created_at, w.id`,
-    [ownerId],
   );
   return rows.map((row) => ({
     ...toWish(row),
@@ -72,39 +65,32 @@ export async function listWishesForGuest(
   }));
 }
 
-export async function createWish(ownerId: string, input: WishInput): Promise<Wish> {
+export async function createWish(input: WishInput): Promise<Wish> {
   const [row] = await query<WishRow>(
-    `insert into wishes as w (owner_id, title, link, price_cents, note)
-     values ($1, $2, $3, $4, $5)
+    `insert into wishes as w (title, link, price_cents, note)
+     values ($1, $2, $3, $4)
      returning ${WISH_COLUMNS}`,
-    [ownerId, input.title.trim(), input.link, input.priceCents, input.note],
+    [input.title.trim(), input.link, input.priceCents, input.note],
   );
   return toWish(row);
 }
 
-/** Ne supprime que dans la liste de `ownerId`. */
-export async function deleteWish(ownerId: string, id: string): Promise<void> {
-  await query(`delete from wishes where id = $1 and owner_id = $2`, [id, ownerId]);
+export async function deleteWish(id: string): Promise<void> {
+  await query(`delete from wishes where id = $1`, [id]);
 }
 
-/**
- * Réserve une envie pour un invité. Refusé (`false`) si l'envie est déjà
- * prise, n'appartient pas à cette liste, ou si l'invité est le propriétaire.
- */
+/** Réserve une envie pour un invité. `false` si elle est déjà prise ou n'existe pas. */
 export async function reserveWish(input: {
   wishId: string;
-  ownerId: string;
   guestId: string;
   guestName: string;
 }): Promise<boolean> {
   const rows = await query<{ wish_id: string }>(
     `insert into reservations (wish_id, guest_id, guest_name)
-     select w.id, $3, $4
-       from wishes w
-      where w.id = $1 and w.owner_id = $2 and $3 <> 'user:' || $2::text
+     select w.id, $2, $3 from wishes w where w.id = $1
      on conflict (wish_id) do nothing
      returning wish_id`,
-    [input.wishId, input.ownerId, input.guestId, input.guestName.trim()],
+    [input.wishId, input.guestId, input.guestName.trim()],
   );
   return rows.length > 0;
 }

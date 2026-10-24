@@ -2,8 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
-import { getUserByShareToken } from "@/lib/accounts";
-import { currentUser } from "@/lib/auth";
+import { isOwner } from "@/lib/auth";
 import { currentGuest, rememberGuestName } from "@/lib/guest";
 import { cancelReservation, reserveWish } from "@/lib/wishes";
 
@@ -15,27 +14,28 @@ function text(formData: FormData, name: string): string {
 export async function setGuestNameAction(formData: FormData): Promise<void> {
   const name = text(formData, "name").slice(0, 40);
   if (name) await rememberGuestName(name);
-  revalidatePath(`/l/${text(formData, "token")}`);
+  revalidatePath("/");
 }
 
 export async function reserveAction(formData: FormData): Promise<void> {
-  const token = text(formData, "token");
-  const owner = await getUserByShareToken(token);
-  const guest = await currentGuest(await currentUser());
+  // Le propriétaire ne réserve pas ses propres cadeaux : ce serait lire,
+  // en creux, ce que les autres ont déjà pris.
+  if (await isOwner()) return;
+
+  const guest = await currentGuest();
   // Sans prénom connu, pas de réservation : la page demande d'abord qui l'on est.
-  if (!owner || !guest?.name) return;
+  if (!guest?.name) return;
 
   await reserveWish({
     wishId: text(formData, "wishId"),
-    ownerId: owner.id,
     guestId: guest.id,
     guestName: guest.name,
   });
-  revalidatePath(`/l/${token}`);
+  revalidatePath("/");
 }
 
 export async function cancelAction(formData: FormData): Promise<void> {
-  const guest = await currentGuest(await currentUser());
+  const guest = await currentGuest();
   if (guest) await cancelReservation(text(formData, "wishId"), guest.id);
-  revalidatePath(`/l/${text(formData, "token")}`);
+  revalidatePath("/");
 }

@@ -1,13 +1,12 @@
 import { isDatabaseConfigured } from "@/lib/db";
-import { isAuthConfigured } from "@/lib/session";
 
 import { TopBar } from "./topbar";
 
-/** Variables d'environnement manquantes pour que les comptes fonctionnent. */
+/** Variables d'environnement manquantes pour que l'application fonctionne. */
 export function missingConfig(): string[] {
   return [
     !isDatabaseConfigured() && "DATABASE_URL",
-    !isAuthConfigured() && "AUTH_SECRET",
+    !process.env.AUTH_SECRET && "AUTH_SECRET",
     !process.env.APP_PASSWORD && "APP_PASSWORD",
   ].filter((name): name is string => Boolean(name));
 }
