@@ -1,22 +1,33 @@
 /* ==========================================================================
-   Socksy — base provisoire, en attendant le choix d'une direction graphique.
-   Thème clair uniquement : pas de variante sombre ni de
-   `prefers-color-scheme` à suivre.
+   Socksy — direction « Sticker »
+   Papier crème, encre noire, contours épais et ombres décalées sans flou,
+   comme des autocollants posés sur la page. Trois couleurs franches :
+   tomate pour la marque, menthe pour l'action « Je l'offre », jaune pour
+   les tampons. Thème clair uniquement.
    ========================================================================== */
 
 :root {
   color-scheme: light;
 
-  --bg: #ffffff;
-  --surface: #f6f6f7;
-  --fg: #1a1a1d;
-  --fg-muted: #5f6068;
-  --border: #e2e2e6;
-  --accent: #1a1a1d;
-  --on-accent: #ffffff;
+  --paper: #fff4e4;
+  --card: #ffffff;
+  --ink: #111111;
+  --ink-muted: #4a4a4a;
+
+  --tomato: #ff5a36;
+  --mint: #3ddc97;
+  --sun: #ffd23f;
+
+  /* Envie déjà prise : papier plus sombre, contour en pointillés. */
+  --taken: #ede4d6;
+  --taken-ink: #5e5649;
+  --taken-border: #8a7f70;
+
   --danger: #b42318;
 
-  --radius: 12px;
+  --stroke: 2.5px solid var(--ink);
+  --pop: 4px 4px 0 var(--ink);
+  --radius: 18px;
 }
 
 * {
@@ -25,120 +36,339 @@
 
 body {
   margin: 0;
-  background: var(--bg);
-  color: var(--fg);
-  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
-  line-height: 1.5;
-}
-
-.page {
-  max-width: 640px;
-  margin: 0 auto;
-  padding: 32px 16px 64px;
-}
-
-h1 {
-  margin: 0 0 24px;
-  font-size: 1.75rem;
-}
-
-h2 {
-  margin: 0 0 12px;
-  font-size: 1.1rem;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body), system-ui, sans-serif;
+  line-height: 1.45;
 }
 
 a {
   color: inherit;
+  font-weight: 700;
 }
 
-.hint {
-  color: var(--fg-muted);
+h1,
+h2 {
+  font-family: var(--font-display), system-ui, sans-serif;
+  font-weight: 400;
+  margin: 0;
+}
+
+h2 {
+  font-size: 1.2rem;
+}
+
+.page {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 22px 16px 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* --- Barre du haut -------------------------------------------------------- */
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.logo {
+  font-family: var(--font-display), system-ui, sans-serif;
+  font-size: 22px;
+  text-decoration: none;
+}
+
+.chip {
+  background: var(--ink);
+  color: var(--paper);
+  font-size: 13px;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+/* --- Bandeau du titre ----------------------------------------------------- */
+
+.hero {
+  background: var(--tomato);
+  border: var(--stroke);
+  border-radius: 22px;
+  box-shadow: 5px 5px 0 var(--ink);
+  padding: 18px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  transform: rotate(-1.5deg);
+  margin: 4px 4px 8px 0;
+}
+
+.hero-sock {
+  flex-shrink: 0;
+}
+
+.hero-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.hero-kicker {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.hero-title {
+  font-family: var(--font-display), system-ui, sans-serif;
+  font-size: clamp(28px, 9vw, 40px);
+  line-height: 1.05;
+  color: #ffffff;
+  -webkit-text-stroke: 1.5px var(--ink);
+  paint-order: stroke fill;
+  overflow-wrap: anywhere;
+}
+
+.lead {
+  margin: 0;
+  font-weight: 500;
+}
+
+.muted {
+  color: var(--ink-muted);
 }
 
 .error {
   color: var(--danger);
+  font-weight: 700;
+  margin: 0;
 }
 
-.wishes {
+/* --- Cartes --------------------------------------------------------------- */
+
+.cards {
   list-style: none;
   margin: 0;
   padding: 0;
-  display: grid;
-  gap: 12px;
-}
-
-.wish {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
+  flex-direction: column;
   gap: 12px;
-  padding: 14px 16px;
-  background: var(--surface);
-  border: 1px solid var(--border);
+}
+
+.card {
+  background: var(--card);
+  border: var(--stroke);
   border-radius: var(--radius);
+  box-shadow: var(--pop);
+  padding: 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
-.wish-body {
+.card.taken {
+  background: var(--taken);
+  border: 2.5px dashed var(--taken-border);
+  box-shadow: none;
+}
+
+.card-body {
+  flex-grow: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
-.wish-title {
-  font-weight: 600;
+.card-title {
+  font-weight: 700;
+  font-size: 16px;
   overflow-wrap: anywhere;
 }
 
-.wish-meta {
-  color: var(--fg-muted);
-  font-size: 0.9rem;
+.card.taken .card-title {
+  text-decoration: line-through;
+  color: var(--taken-ink);
+}
+
+.card-meta {
+  font-size: 13px;
+  color: var(--ink-muted);
   overflow-wrap: anywhere;
+}
+
+.card.taken .card-meta {
+  color: var(--taken-ink);
+}
+
+.card-actions {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.stamp {
+  background: var(--sun);
+  border: 2px solid var(--ink);
+  border-radius: 8px;
+  padding: 4px 8px;
+  font-size: 12px;
+  font-weight: 700;
+  transform: rotate(4deg);
+  white-space: nowrap;
+}
+
+.empty {
+  border: 2.5px dashed var(--taken-border);
+  border-radius: var(--radius);
+  padding: 20px;
+  text-align: center;
+  color: var(--ink-muted);
+}
+
+/* --- Boutons -------------------------------------------------------------- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 16px;
+  border: var(--stroke);
+  border-radius: 12px;
+  background: var(--mint);
+  color: var(--ink);
+  font: 700 15px var(--font-body), system-ui, sans-serif;
+  text-decoration: none;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.btn:active {
+  transform: translate(2px, 2px);
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.btn.ink {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.btn.sun {
+  background: var(--sun);
+}
+
+.btn.plain {
+  background: var(--card);
+}
+
+.btn.block {
+  width: 100%;
+}
+
+.link-btn {
+  background: none;
+  border: 0;
+  padding: 4px 0;
+  font: 700 13px var(--font-body), system-ui, sans-serif;
+  color: var(--ink);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.link-btn.danger {
+  color: var(--danger);
+}
+
+/* --- Formulaires ---------------------------------------------------------- */
+
+.panel {
+  background: var(--card);
+  border: var(--stroke);
+  border-radius: var(--radius);
+  box-shadow: var(--pop);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .form {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 12px;
-  margin-bottom: 32px;
+}
+
+.row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.row > label {
+  flex-grow: 1;
+  min-width: 0;
 }
 
 label {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 4px;
-  font-size: 0.9rem;
+  font-size: 14px;
+  font-weight: 700;
 }
 
 input,
 textarea {
-  font: inherit;
+  font: 500 16px var(--font-body), system-ui, sans-serif;
   padding: 10px 12px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--bg);
-  color: var(--fg);
+  border: var(--stroke);
+  border-radius: 12px;
+  background: var(--card);
+  color: var(--ink);
+  width: 100%;
 }
 
-button {
-  font: inherit;
-  font-weight: 600;
-  padding: 10px 16px;
-  border: 0;
-  border-radius: 8px;
-  background: var(--accent);
-  color: var(--on-accent);
+input:focus-visible,
+textarea:focus-visible,
+.btn:focus-visible {
+  outline: 3px solid var(--tomato);
+  outline-offset: 2px;
+}
+
+details.panel > summary {
+  font-weight: 700;
   cursor: pointer;
 }
 
-button:disabled {
-  opacity: 0.6;
-}
-
-button.ghost {
-  background: transparent;
-  color: var(--danger);
-  padding: 4px 8px;
-}
-
-.nav {
+.share {
   display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  margin-bottom: 24px;
+  gap: 8px;
+}
+
+.share input {
+  flex-grow: 1;
+  min-width: 0;
+  font-size: 14px;
+}
+
+.family {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.footer {
+  display: flex;
+  justify-content: center;
+  margin-top: 8px;
 }

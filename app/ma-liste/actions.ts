@@ -1,21 +1,22 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
-import { isAuthenticated } from "@/lib/auth";
+import { closeSession, currentUser } from "@/lib/auth";
 import { parseEuros } from "@/lib/money";
 import { createWish, deleteWish, normalizeLink } from "@/lib/wishes";
 
 export type WishFormState = { error?: string; ok?: number };
 
 /**
- * Le proxy ferme déjà /gerer, mais une action serveur reste un point d'entrée
- * à part entière : elle vérifie la session elle-même.
+ * Le proxy ferme déjà /ma-liste, mais une action serveur reste un point
+ * d'entrée à part entière : elle retrouve le compte elle-même.
  */
-async function requireSession(): Promise<void> {
-  if (!(await isAuthenticated())) {
-    throw new Error("Session expirée : reconnecte-toi.");
-  }
+async function requireUser() {
+  const user = await currentUser();
+  if (!user) redirect("/login?next=/ma-liste");
+  return user;
 }
 
 function text(formData: FormData, name: string): string {
@@ -27,7 +28,7 @@ export async function addWishAction(
   state: WishFormState,
   formData: FormData,
 ): Promise<WishFormState> {
-  await requireSession();
+  const user = await requireUser();
 
   const title = text(formData, "title");
   if (!title) return { error: "Donne un nom à ton envie." };
@@ -40,17 +41,25 @@ export async function addWishAction(
     return { error: "Le prix doit être un montant, par exemple 24,90." };
   }
 
-  await createWish({ title, link, priceCents, note: text(formData, "note") || null });
-  revalidatePath("/");
-  revalidatePath("/gerer");
+  await createWish(user.id, {
+    title,
+    link,
+    priceCents,
+    note: text(formData, "note") || null,
+  });
+  revalidatePath("/ma-liste");
   // Le compteur change à chaque ajout : le formulaire s'en sert pour se vider.
   return { ok: (state.ok ?? 0) + 1 };
 }
 
 export async function deleteWishAction(formData: FormData): Promise<void> {
-  await requireSession();
+  const user = await requireUser();
   const id = text(formData, "id");
-  if (id) await deleteWish(id);
-  revalidatePath("/");
-  revalidatePath("/gerer");
+  if (id) await deleteWish(user.id, id);
+  revalidatePath("/ma-liste");
+}
+
+export async function logoutAction(): Promise<void> {
+  await closeSession();
+  redirect("/");
 }

@@ -1,19 +1,18 @@
 /**
- * Vérification du cookie de session, sans dépendance à `next/headers`.
+ * Jeton de session signé, sans dépendance à `next/headers` ni à Node : le
+ * proxy tourne en amont du rendu et partage cette logique avec les pages.
  *
- * Isolé pour cette raison précise : le middleware tourne en amont du rendu et
- * ne peut pas utiliser l'API `cookies()`. Les deux côtés partagent donc cette
- * logique plutôt que d'en maintenir deux copies qui finiraient par diverger.
+ * Le jeton porte l'identifiant du compte : `<compte>.<émission>.<signature>`.
  */
 
 export const SESSION_COOKIE = "socksy_session";
 
-/** 30 jours : on n'est pas sur des données bancaires. */
-export const SESSION_MAX_AGE = 60 * 60 * 24 * 30;
+/** 60 jours : de quoi couvrir toute la saison des cadeaux. */
+export const SESSION_MAX_AGE = 60 * 60 * 24 * 60;
 
-/** `true` si les variables d'environnement d'authentification sont en place. */
+/** `true` si la clé de signature des sessions est en place. */
 export function isAuthConfigured(): boolean {
-  return Boolean(process.env.APP_PASSWORD && process.env.AUTH_SECRET);
+  return Boolean(process.env.AUTH_SECRET);
 }
 
 export async function signPayload(payload: string): Promise<string> {
@@ -53,26 +52,30 @@ export function safeEquals(a: string, b: string): boolean {
   return diff === 0;
 }
 
-export function newToken(): Promise<string> {
-  const issued = String(Date.now());
-  return signPayload(issued).then((signature) => `${issued}.${signature}`);
+export async function newToken(userId: string): Promise<string> {
+  const payload = `${userId}.${Date.now()}`;
+  return `${payload}.${await signPayload(payload)}`;
 }
 
-/** Vérifie signature et fraîcheur. Ne lève jamais : renvoie `false`. */
-export async function verifyToken(
+/** L'identifiant du compte si le jeton est valide et frais, sinon `null`. Ne lève jamais. */
+export async function readToken(
   token: string | undefined,
-): Promise<boolean> {
-  if (!token) return false;
+): Promise<string | null> {
+  if (!token) return null;
 
-  const [issued, signature] = token.split(".");
-  if (!issued || !signature) return false;
+  const [userId, issued, signature] = token.split(".");
+  if (!userId || !issued || !signature) return null;
 
   try {
-    if (!safeEquals(signature, await signPayload(issued))) return false;
+    if (!safeEquals(signature, await signPayload(`${userId}.${issued}`))) {
+      return null;
+    }
   } catch {
-    return false;
+    return null;
   }
 
   const age = Date.now() - Number(issued);
-  return Number.isFinite(age) && age >= 0 && age < SESSION_MAX_AGE * 1000;
+  return Number.isFinite(age) && age >= 0 && age < SESSION_MAX_AGE * 1000
+    ? userId
+    : null;
 }

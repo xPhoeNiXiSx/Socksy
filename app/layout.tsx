@@ -1,16 +1,34 @@
 import type { Metadata, Viewport } from "next";
+import { Archivo_Black, Space_Grotesk } from "next/font/google";
 
 import "./globals.css";
 
+/**
+ * Direction « Sticker » : Archivo Black pour le logo, les titres et les
+ * prénoms, Space Grotesk pour tout le reste.
+ */
+const display = Archivo_Black({
+  subsets: ["latin"],
+  weight: "400",
+  variable: "--font-display",
+  display: "swap",
+});
+
+const body = Space_Grotesk({
+  subsets: ["latin"],
+  variable: "--font-body",
+  display: "swap",
+});
+
 export const metadata: Metadata = {
   title: "Socksy",
-  description: "Ma liste de Noël : ce qui me ferait plaisir.",
+  description: "Les listes de Noël de la famille, et la surprise gardée.",
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#ffffff",
+  themeColor: "#fff4e4",
 };
 
 export default function RootLayout({
@@ -19,7 +37,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="fr">
+    <html lang="fr" className={`${display.variable} ${body.variable}`}>
       <body>{children}</body>
     </html>
   );

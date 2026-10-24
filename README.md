@@ -1,17 +1,22 @@
 # Socksy
 
-Ma liste de Noël : ce qui me ferait plaisir, à partager avec mes proches.
+Les listes de Noël de la famille, et la surprise gardée.
 
-- **`/`** — la liste, en lecture, ouverte à tous
-- **`/gerer`** — ajouter et retirer des envies, derrière un mot de passe
+- **`/`** — l'accueil : créer sa liste ou se connecter
+- **`/inscription`** — créer son compte, avec le code famille
+- **`/ma-liste`** — ajouter et retirer ses envies, partager son lien, ouvrir
+  les listes des autres membres de la famille
+- **`/l/<jeton>`** — une liste partagée. On y réserve un cadeau (« Je
+  l'offre ») avec son prénom, sans compte. Les autres invités voient qui a
+  pris quoi ; le propriétaire de la liste, jamais.
 
 ## Variables d'environnement (Vercel)
 
 | Variable | Rôle |
 | --- | --- |
 | `DATABASE_URL` | Base Postgres Neon, posée par Vercel en reliant la base au projet |
-| `APP_PASSWORD` | Mot de passe de la page de gestion |
 | `AUTH_SECRET` | Clé de signature du cookie de session (`openssl rand -hex 32`) |
+| `APP_PASSWORD` | Code famille, demandé à l'inscription |
 
 Le schéma s'applique tout seul au premier accès à la base.
 

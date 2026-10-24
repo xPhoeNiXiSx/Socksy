@@ -23,10 +23,21 @@ illisible) ne sont pas concernées : elles se corrigent directement.
 
 ## Thème
 
-**Clair uniquement.** Pas de thème sombre, pas de `prefers-color-scheme` à
-suivre. Les variables vivent dans `app/globals.css`, `:root` déclare
-`color-scheme: light`. La direction graphique reste à choisir : la feuille
-actuelle est une base provisoire.
+**Clair uniquement**, direction « Sticker » (proposition A des maquettes) :
+papier crème `#FFF4E4`, encre `#111111`, contours épais et ombres décalées
+sans flou. Trois couleurs franches : tomate `#FF5A36` (marque), menthe
+`#3DDC97` (action « Je l'offre »), jaune `#FFD23F` (tampons). Pas de thème
+sombre, pas de `prefers-color-scheme` à suivre. Les variables vivent dans
+`app/globals.css`, `:root` déclare `color-scheme: light`.
+
+Polices : Archivo Black (logo, titres, prénoms), Space Grotesk (texte).
+
+## La surprise gardée
+
+Le propriétaire d'une liste ne doit **jamais** voir les réservations de sa
+liste, par aucun chemin. Seule `listWishesForGuest` joint la table
+`reservations`, et la vue d'un propriétaire sur son propre lien ne l'appelle
+pas. Toute nouvelle requête sur les envies garde cette règle.
 
 ## Règles techniques
 
