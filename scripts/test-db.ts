@@ -128,6 +128,12 @@ async function main() {
     [["Un pull", "Julie", false], ["Un livre", null, false]],
   );
   assert.equal((await listWishesForGuest(julie))[0].mine, true);
+  // Une seule envie, pour la page d'un cadeau.
+  assert.deepEqual(
+    (await listWishesForGuest(julie, pull.id)).map((w) => [w.title, w.reservedBy, w.mine]),
+    [["Un pull", "Julie", true]],
+  );
+  assert.deepEqual(await listWishesForGuest(julie, "00000000-0000-0000-0000-000000000000"), []);
   assert.equal((await listWishesForGuest(null))[0].mine, false);
 
   // La vue du propriétaire ne porte aucune trace des réservations.

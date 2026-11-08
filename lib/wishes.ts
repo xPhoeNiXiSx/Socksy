@@ -62,19 +62,34 @@ export async function getWish(id: string): Promise<Wish | null> {
   return rows[0] ? toWish(rows[0]) : null;
 }
 
-/** Les envies vues par un invité, réservations comprises. */
-export async function listWishesForGuest(guestId: string | null): Promise<GuestWish[]> {
-  const rows = await query<WishRow & { guest_name: string | null; guest_id: string | null }>(
-    `select ${WISH_COLUMNS}, r.guest_name, r.guest_id
-       from wishes w
-       left join reservations r on r.wish_id = w.id
-      order by w.created_at, w.id`,
-  );
-  return rows.map((row) => ({
+type GuestWishRow = WishRow & { guest_name: string | null; guest_id: string | null };
+
+function toGuestWish(row: GuestWishRow, guestId: string | null): GuestWish {
+  return {
     ...toWish(row),
     reservedBy: row.guest_name,
     mine: guestId !== null && row.guest_id === guestId,
-  }));
+  };
+}
+
+/**
+ * Les envies vues par un invité, réservations comprises. Avec `id`, une
+ * seule envie (la page d'un cadeau) ; c'est la seule requête qui lit les
+ * réservations.
+ */
+export async function listWishesForGuest(
+  guestId: string | null,
+  id?: string,
+): Promise<GuestWish[]> {
+  const rows = await query<GuestWishRow>(
+    `select ${WISH_COLUMNS}, r.guest_name, r.guest_id
+       from wishes w
+       left join reservations r on r.wish_id = w.id
+      where $1::uuid is null or w.id = $1::uuid
+      order by w.created_at, w.id`,
+    [id ?? null],
+  );
+  return rows.map((row) => toGuestWish(row, guestId));
 }
 
 export async function createWish(input: WishInput): Promise<Wish> {

@@ -14,7 +14,7 @@ function text(formData: FormData, name: string): string {
 export async function setGuestNameAction(formData: FormData): Promise<void> {
   const name = text(formData, "name").slice(0, 40);
   if (name) await rememberGuestName(name);
-  revalidatePath("/");
+  revalidatePath("/", "layout");
 }
 
 export async function reserveAction(formData: FormData): Promise<void> {
@@ -31,11 +31,11 @@ export async function reserveAction(formData: FormData): Promise<void> {
     guestId: guest.id,
     guestName: guest.name,
   });
-  revalidatePath("/");
+  revalidatePath("/", "layout");
 }
 
 export async function cancelAction(formData: FormData): Promise<void> {
   const guest = await currentGuest();
   if (guest) await cancelReservation(text(formData, "wishId"), guest.id);
-  revalidatePath("/");
+  revalidatePath("/", "layout");
 }

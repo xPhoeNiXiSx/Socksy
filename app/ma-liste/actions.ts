@@ -100,8 +100,7 @@ export async function addWishAction(
   if ("error" in wish) return { ...state, error: wish.error };
 
   await createWish(wish);
-  revalidatePath("/ma-liste");
-  revalidatePath("/");
+  revalidatePath("/", "layout");
   // Le compteur change à chaque ajout : le formulaire s'en sert pour se vider.
   return { ok: (state.ok ?? 0) + 1 };
 }
@@ -118,8 +117,7 @@ export async function updateWishAction(
   const result = await updateWish(text(formData, "id"), wish);
   if (result) await forgetImage(result.previousImageUrl, wish.imageUrl);
 
-  revalidatePath("/ma-liste");
-  revalidatePath("/");
+  revalidatePath("/", "layout");
   redirect("/ma-liste");
 }
 
@@ -127,8 +125,7 @@ export async function deleteWishAction(formData: FormData): Promise<void> {
   await requireOwner();
   const id = text(formData, "id");
   if (id) await forgetImage(await deleteWish(id), null);
-  revalidatePath("/ma-liste");
-  revalidatePath("/");
+  revalidatePath("/", "layout");
 }
 
 export async function logoutAction(): Promise<void> {

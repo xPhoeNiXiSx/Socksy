@@ -30,6 +30,10 @@ export default async function EditWishPage({
     <main className="page">
       <TopBar />
       <Hero kicker="Modifier" title={wish.title} />
+      {wish.imageUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img className="wish-photo" src={wish.imageUrl} alt="" referrerPolicy="no-referrer" />
+      ) : null}
       <EditWishForm wish={wish} uploads={isUploadConfigured()} />
     </main>
   );

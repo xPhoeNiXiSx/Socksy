@@ -211,6 +211,12 @@ h2 {
   font-weight: 700;
   font-size: 16px;
   overflow-wrap: anywhere;
+  text-decoration: none;
+}
+
+.card-thumb-link {
+  flex-shrink: 0;
+  display: flex;
 }
 
 .card.taken .card-title {
@@ -389,6 +395,53 @@ details.panel > summary {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+/* --- Page d'un cadeau ---------------------------------------------------- */
+
+.back {
+  align-self: flex-start;
+  font-size: 14px;
+}
+
+/* La photo en grand, en tête de page : posée comme un autocollant, entière
+   (jamais recadrée), sur fond blanc pour les visuels détourés des boutiques. */
+.wish-photo {
+  display: block;
+  width: 100%;
+  max-height: 60vh;
+  object-fit: contain;
+  background: var(--card);
+  border: var(--stroke);
+  border-radius: 22px;
+  box-shadow: 5px 5px 0 var(--ink);
+}
+
+.wish-photo.taken {
+  opacity: 0.6;
+  filter: grayscale(0.6);
+}
+
+.wish-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.wish-heading h1 {
+  font-size: clamp(26px, 8vw, 36px);
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+}
+
+.wish-heading .card-meta {
+  font-size: 16px;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .footer {
